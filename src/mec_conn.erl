@@ -14,11 +14,10 @@
 %% limitations under the License.
 %%
 
--module(ecallc_connection).
+-module(mec_conn).
 
 -define(REQUEST(Operation, Resource, Params, Payload), {request, Operation, Resource, Params, Payload}).
--define(RESPONSE(Status, Payload), {response, Status, Payload}).
--define(SIMPLE_RESPONSE(Status), ?RESPONSE(Status, empty)).
+-define(RESPONSE(Status, Params, Payload), {response, Status, Params, Payload}).
 
 -behaviour(gen_server).
 
@@ -27,10 +26,10 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start_link/3]).
+-export([start/3]).
 
-start_link(Server, Port, Owner) ->
-	gen_server:start_link(?MODULE, [Server, Port, Owner], []).
+start(Server, Port, Owner) ->
+	gen_server:start(?MODULE, [Server, Port, Owner], []).
 
 %% ====================================================================
 %% Behavioural functions
@@ -41,8 +40,8 @@ start_link(Server, Port, Owner) ->
 init([Server, Port, Owner]) ->
 	case gen_tcp:connect(Server, Port, [{active, false}, binary, {keepalive, true}]) of
 		{ok, Socket}  ->
-			monitor(process, Owner),
-    		{ok, #state{socket=Socket, owner=Owner}};
+			Ref = monitor(process, Owner),
+			{ok, #state{socket=Socket, owner=Ref}};
 		{error, Reason} -> {stop,Reason}
 	end.
 
@@ -50,44 +49,40 @@ init([Server, Port, Owner]) ->
 handle_call({call, Operation, Resource, Params, Payload}, _From, State=#state{socket=Socket}) ->
 	Request = ?REQUEST(Operation, Resource, Params, Payload),
 	EncodedRequest = erlang:term_to_binary(Request),
-    Reply = case gen_tcp:send(Socket, EncodedRequest) of
+	Reply = case gen_tcp:send(Socket, EncodedRequest) of
 		ok ->
 			case gen_tcp:recv(Socket, 0) of
 				{ok, Packet} ->
-					Response = erlang:binary_to_term(Packet, [safe]),
-					case Response of
-						?SIMPLE_RESPONSE(Status) ->
-							{ok, Status};
-						?RESPONSE(Status, Data) ->
-							{ok, Status, Data}
-					end;
+					?RESPONSE(Status, Props, Data) = erlang:binary_to_term(Packet, [safe]),
+					{ok, Status, Props, Data};
 				Other -> Other
 			end;
 		Other -> Other
 	end,
-    {reply, Reply, State}.
-
+	{reply, Reply, State};
+handle_call(_Request, _From, State) ->
+	{noreply, State}.
 
 %% handle_cast/2
 handle_cast({shutdown}, State) ->
-    {stop, shutdown, State}.
-
+	{stop, shutdown, State};
+handle_cast(_Request, State) ->
+	{noreply, State}.
 
 %% handle_info/2
-handle_info({'DOWN', _MonitorRef, process, OwnerPid, shutdown}, State=#state{owner=OwnerPid}) ->
-    {stop, normal, State}.
-
+handle_info({'DOWN', OwnerRef, _, _, _}, State=#state{owner=OwnerRef}) ->
+	{stop, normal, State};
+handle_info(_Info, State) ->
+	{noreply, State}.
 
 %% terminate/2
 terminate(_Reason, #state{socket=Socket}) ->
 	gen_tcp:close(Socket),
-    ok.
-
+	ok.
 
 %% code_change/3
 code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
-
+	{ok, State}.
 
 %% ====================================================================
 %% Internal functions

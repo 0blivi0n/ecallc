@@ -14,7 +14,7 @@
 %% limitations under the License.
 %%
 
--module(ecallc).
+-module(mec).
 
 -behaviour(application).
 
@@ -24,28 +24,28 @@
 %% API functions
 %% ====================================================================
 -export([open/2,
-		 call/3,
-		 call/4,
-		 call/5, 
-		 close/1]).
+	call/3,
+	call/4,
+	call/5, 
+	close/1]).
 
 -spec open(Server :: Address, Port :: integer()) -> {ok, Pid :: pid()} | {error, Reason :: any()}
 	when Address :: inet:ip_address() | inet:hostname().
 open(Server, Port) when is_integer(Port) ->
-	ecallc_sup:connection(Server, Port, self()).
+	mec_sup:connection(Server, Port).
 
 -spec call(Pid :: pid(), Operation :: binary(), Resource :: list()) ->
-	{ok, Status :: integer(), Payload :: any()} | {ok, Status :: integer()} | {error, Reason :: any()}.
+	{ok, Status :: integer(), Params :: list(), Payload :: empty | any()} | {error, Reason :: any()}.
 call(Pid, Operation, Resource) ->
 	call(Pid, Operation, Resource, [], empty).
 
 -spec call(Pid :: pid(), Operation :: binary(), Resource :: list(), Params :: list()) ->
-	{ok, Status :: integer(), Payload :: any()} | {ok, Status :: integer()} | {error, Reason :: any()}.
+	{ok, Status :: integer(), Params :: list(), Payload :: empty | any()} | {error, Reason :: any()}.
 call(Pid, Operation, Resource, Params) ->
 	call(Pid, Operation, Resource, Params, empty).
 
 -spec call(Pid :: pid(), Operation :: binary(), Resource :: list(), Params :: list(), Payload :: empty | any()) ->
-	{ok, Status :: integer(), Payload :: any()} | {ok, Status :: integer()} | {error, Reason :: any()}.
+	{ok, Status :: integer(), Params :: list(), Payload :: empty | any()} | {error, Reason :: any()}.
 call(Pid, Operation, Resource, Params, Payload) ->
 	gen_server:call(Pid, {call, Operation, Resource, Params, Payload}).
 
@@ -59,11 +59,11 @@ close(Pid) ->
 
 %% start/2
 start(_Type, _StartArgs) ->
-    ecallc_sup:start_link().
+	mec_sup:start_link().
 
 %% stop/1
 stop(_State) ->
-    ok.
+	ok.
 
 %% ====================================================================
 %% Internal functions

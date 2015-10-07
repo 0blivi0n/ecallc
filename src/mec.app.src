@@ -14,19 +14,19 @@
 %% limitations under the License.
 %%
 
-{application, ecallc, [
-	{description, "ECall erlang client"},
+{application, mec, [
+	{description, "Mercury's Erlang Client"},
 	{vsn, "0.5.0"},
 	{modules, [
 	]},
 	{registered, [
-		ecallc_sup 
+		mec_sup 
 	]},
 	{applications, [
 		kernel, 
 		stdlib
 	]},
-	{mod, {ecallc, []}},
+	{mod, {mec, []}},
 	{env, [
 	]}
 ]}.

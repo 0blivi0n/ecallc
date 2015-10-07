@@ -14,7 +14,7 @@
 %% limitations under the License.
 %%
 
--module(ecallc_sup).
+-module(mec_sup).
 
 -define(SERVER, {local, ?MODULE}).
 
@@ -26,13 +26,13 @@
 %% API functions
 %% ====================================================================
 -export([start_link/0,
-		 connection/3]).
+	connection/2]).
 
 start_link() ->
 	supervisor:start_link(?SERVER, ?MODULE, []).
 
-connection(Server, Port, Owner) ->
-	supervisor:start_child(?MODULE, [Server, Port, Owner]).
+connection(Server, Port) ->
+	supervisor:start_child(?MODULE, [Server, Port, self()]).
 
 %% ====================================================================
 %% Behavioural functions
@@ -40,8 +40,8 @@ connection(Server, Port, Owner) ->
 
 %% init/1
 init([]) ->
-    error_logger:info_msg("~p [~p] Starting...\n", [?MODULE, self()]),
-	Connection = {ecallc_connection, {ecallc_connection, start_link, []}, temporary, 2000, worker, [ecallc_connection]},
+	error_logger:info_msg("~p [~p] Starting...\n", [?MODULE, self()]),
+	Connection = {mec_conn, {mec_conn, start, []}, temporary, 2000, worker, [mec_conn]},
 	{ok,{{simple_one_for_one, 10, 60}, [Connection]}}.
 
 %% ====================================================================

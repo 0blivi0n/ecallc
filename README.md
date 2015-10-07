@@ -1,2 +1,2 @@
-# ecallc
-ECall erlang client
+# MEC
+Mercury's Erlang Client
