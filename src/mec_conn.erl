@@ -26,10 +26,10 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start/3]).
+-export([start_link/3]).
 
-start(Server, Port, Owner) ->
-	gen_server:start(?MODULE, [Server, Port, Owner], []).
+start_link(Server, Port, Owner) ->
+	gen_server:start_link(?MODULE, [Server, Port, Owner], []).
 
 %% ====================================================================
 %% Behavioural functions
