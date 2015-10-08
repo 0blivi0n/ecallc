@@ -41,7 +41,7 @@ connection(Server, Port) ->
 %% init/1
 init([]) ->
 	error_logger:info_msg("~p [~p] Starting...\n", [?MODULE, self()]),
-	Connection = {mec_conn, {mec_conn, start, []}, temporary, 2000, worker, [mec_conn]},
+	Connection = {mec_conn, {mec_conn, start_link, []}, temporary, 2000, worker, [mec_conn]},
 	{ok,{{simple_one_for_one, 10, 60}, [Connection]}}.
 
 %% ====================================================================
