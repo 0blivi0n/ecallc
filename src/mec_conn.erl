@@ -53,7 +53,7 @@ handle_call({call, Operation, Resource, Params, Payload}, _From, State=#state{so
 		ok ->
 			case gen_tcp:recv(Socket, 0) of
 				{ok, Packet} ->
-					?RESPONSE(Status, Props, Data) = erlang:binary_to_term(Packet, [safe]),
+					?RESPONSE(Status, Props, Data) = erlang:binary_to_term(Packet),
 					{ok, Status, Props, Data};
 				Other -> Other
 			end;
