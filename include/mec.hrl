@@ -1,5 +1,5 @@
 %%
-%% Copyright 2015-16 Joaquim Rocha <jrocha@gmailbox.org>
+%% Copyright 2016 Joaquim Rocha <jrocha@gmailbox.org>
 %% 
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -14,19 +14,6 @@
 %% limitations under the License.
 %%
 
-{ application, mec, [
-  {description, "Mercury's Erlang Client"},
-  {vsn, "0.5.1"},
-  {modules, [
-  ]},
-  {registered, [
-    mec_sup
-  ]},
-  {applications, [
-    kernel,
-    stdlib
-  ]},
-  {mod, {mec, []}},
-  {env, [
-  ]}
-]}.
+-record(mercury_request, {operation, resource, params = #{}, payload = empty}).
+
+-record(mercury_reply, {status, params, payload}).

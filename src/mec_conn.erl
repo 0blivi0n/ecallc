@@ -1,5 +1,5 @@
 %%
-%% Copyright 2015 Joaquim Rocha <jrocha@gmailbox.org>
+%% Copyright 2015-16 Joaquim Rocha <jrocha@gmailbox.org>
 %% 
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 -module(mec_conn).
 
--define(REQUEST(Operation, Resource, Params, Payload), {request, Operation, Resource, Params, Payload}).
--define(RESPONSE(Status, Params, Payload), {response, Status, Params, Payload}).
+-include("mec.hrl").
 
 -behaviour(gen_server).
 
@@ -29,7 +28,7 @@
 -export([start_link/3]).
 
 start_link(Server, Port, Owner) ->
-	gen_server:start_link(?MODULE, [Server, Port, Owner], []).
+  gen_server:start_link(?MODULE, [Server, Port, Owner], []).
 
 %% ====================================================================
 %% Behavioural functions
@@ -38,54 +37,63 @@ start_link(Server, Port, Owner) ->
 
 %% init/1
 init([Server, Port, Owner]) ->
-	case gen_tcp:connect(Server, Port, [{active, false}, binary, {keepalive, true}]) of
-		{ok, Socket}  ->
-			Ref = monitor(process, Owner),
-			{ok, #state{socket=Socket, owner=Ref}};
-		{error, Reason} -> {stop,Reason}
-	end.
+  case gen_tcp:connect(Server, Port, [{active, false}, binary, {keepalive, true}]) of
+    {ok, Socket} ->
+      Ref = monitor(process, Owner),
+      {ok, #state{socket = Socket, owner = Ref}};
+    {error, Reason} -> {stop, Reason}
+  end.
 
 %% handle_call/3
-handle_call({call, Operation, Resource, Params, Payload}, _From, State=#state{socket=Socket}) ->
-	Request = ?REQUEST(Operation, Resource, Params, Payload),
-	EncodedRequest = erlang:term_to_binary(Request),
-	Reply = case gen_tcp:send(Socket, EncodedRequest) of
-		ok ->
-			case gen_tcp:recv(Socket, 0) of
-				{ok, Packet} ->
-					?RESPONSE(Status, Props, Data) = erlang:binary_to_term(Packet),
-					{ok, Status, Props, Data};
-				Other -> Other
-			end;
-		Other -> Other
-	end,
-	{reply, Reply, State};
+handle_call({call, Request, Timeout}, _From, State = #state{socket = Socket}) ->
+  EncodedRequest = encode(Request),
+  Reply = case gen_tcp:send(Socket, EncodedRequest) of
+            ok ->
+              case receive_reply(Socket, Timeout) of
+                {ok, EncodedReply} ->
+                  DecodedReply = decode(EncodedReply),
+                  {ok, DecodedReply};
+                Other -> Other
+              end;
+            Other -> Other
+          end,
+  {reply, Reply, State};
 handle_call(_Request, _From, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 %% handle_cast/2
 handle_cast({shutdown}, State) ->
-	{stop, shutdown, State};
+  {stop, shutdown, State};
 handle_cast(_Request, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 %% handle_info/2
-handle_info({'DOWN', OwnerRef, _, _, _}, State=#state{owner=OwnerRef}) ->
-	{stop, normal, State};
+handle_info({'DOWN', OwnerRef, _, _, _}, State = #state{owner = OwnerRef}) ->
+  {stop, normal, State};
 handle_info(_Info, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 %% terminate/2
-terminate(_Reason, #state{socket=Socket}) ->
-	gen_tcp:close(Socket),
-	ok.
+terminate(_Reason, #state{socket = Socket}) ->
+  gen_tcp:close(Socket),
+  ok.
 
 %% code_change/3
 code_change(_OldVsn, State, _Extra) ->
-	{ok, State}.
+  {ok, State}.
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
+encode(#mercury_request{operation = Operation, resource = Resource, params = Params, payload = Payload}) ->
+  erlang:term_to_binary({request, Operation, Resource, Params, Payload}).
 
+decode(EncodedReply) ->
+  {reply, Status, Params, Payload} = erlang:binary_to_term(EncodedReply),
+  #mercury_reply{status = Status, params = Params, payload = Payload}.
+
+receive_reply(Socket, infinity) ->
+  gen_tcp:recv(Socket, 0);
+receive_reply(Socket, Timeout) ->
+  gen_tcp:recv(Socket, 0, Timeout).

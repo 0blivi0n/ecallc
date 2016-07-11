@@ -26,13 +26,13 @@
 %% API functions
 %% ====================================================================
 -export([start_link/0,
-	connection/2]).
+         connection/2]).
 
 start_link() ->
-	supervisor:start_link(?SERVER, ?MODULE, []).
+  supervisor:start_link(?SERVER, ?MODULE, []).
 
 connection(Server, Port) ->
-	supervisor:start_child(?MODULE, [Server, Port, self()]).
+  supervisor:start_child(?MODULE, [Server, Port, self()]).
 
 %% ====================================================================
 %% Behavioural functions
@@ -40,9 +40,9 @@ connection(Server, Port) ->
 
 %% init/1
 init([]) ->
-	error_logger:info_msg("~p [~p] Starting...\n", [?MODULE, self()]),
-	Connection = {mec_conn, {mec_conn, start_link, []}, temporary, 2000, worker, [mec_conn]},
-	{ok,{{simple_one_for_one, 10, 60}, [Connection]}}.
+  error_logger:info_msg("~p [~p] Starting...\n", [?MODULE, self()]),
+  Connection = {mec_conn, {mec_conn, start_link, []}, temporary, 2000, worker, [mec_conn]},
+  {ok, {{simple_one_for_one, 10, 60}, [Connection]}}.
 
 %% ====================================================================
 %% Internal functions
